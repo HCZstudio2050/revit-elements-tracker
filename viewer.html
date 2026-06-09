@@ -1,0 +1,1751 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Revit Element Tracker - Standalone Viewer & Comparator</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            /* Theme colors (Default Dark Mode) */
+            --bg-base: #0b0f19;
+            --bg-card: #131a2c;
+            --bg-hover: #1e2942;
+            --border-color: #24314c;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            
+            --color-primary: #6366f1;
+            --color-primary-hover: #4f46e5;
+            --color-primary-rgb: 99, 102, 241;
+            
+            --color-added: #10b981;
+            --color-added-bg: rgba(16, 185, 129, 0.15);
+            --color-deleted: #ef4444;
+            --color-deleted-bg: rgba(239, 68, 68, 0.15);
+            --color-modified: #f59e0b;
+            --color-modified-bg: rgba(245, 158, 11, 0.15);
+            
+            --font-display: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+            --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+            --shadow-glow: 0 0 20px rgba(99, 102, 241, 0.15);
+            
+            --radius-sm: 6px;
+            --radius-md: 12px;
+            --radius-lg: 18px;
+            
+            --transition-all: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        /* Light Theme overrides */
+        html[data-theme="light"] {
+            --bg-base: #f8fafc;
+            --bg-card: #ffffff;
+            --bg-hover: #f1f5f9;
+            --border-color: #e2e8f0;
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
+            --text-muted: #94a3b8;
+            
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.03);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
+            --shadow-glow: 0 0 20px rgba(99, 102, 241, 0.08);
+            
+            --color-added-bg: rgba(16, 185, 129, 0.08);
+            --color-deleted-bg: rgba(239, 68, 68, 0.08);
+            --color-modified-bg: rgba(245, 158, 11, 0.08);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-base);
+            color: var(--text-primary);
+            font-family: var(--font-sans);
+            line-height: 1.5;
+            transition: var(--transition-all);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .header-title h1 {
+            font-family: var(--font-display);
+            font-size: 2rem;
+            font-weight: 800;
+            letter-spacing: -0.025em;
+            background: linear-gradient(135deg, var(--text-primary) 30%, var(--color-primary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header-title p {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            margin-top: 0.25rem;
+            font-weight: 500;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .btn {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 0.6rem 1.2rem;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            font-family: var(--font-sans);
+            font-weight: 600;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: var(--transition-all);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .btn:hover {
+            background: var(--bg-hover);
+            transform: translateY(-2px);
+        }
+
+        .btn-primary {
+            background: var(--color-primary);
+            border-color: var(--color-primary);
+            color: #ffffff;
+        }
+
+        .btn-primary:hover {
+            background: var(--color-primary-hover);
+            border-color: var(--color-primary-hover);
+        }
+
+        .btn-primary:disabled {
+            background: var(--text-muted);
+            border-color: var(--text-muted);
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .theme-toggle-btn {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 0.6rem;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: var(--transition-all);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .theme-toggle-btn:hover {
+            background: var(--bg-hover);
+            transform: translateY(-2px);
+        }
+
+        .theme-toggle-btn svg {
+            width: 20px;
+            height: 20px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2;
+        }
+
+        /* Mode Selection Home Page */
+        .portal-home {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 2rem;
+            margin-top: 3rem;
+        }
+
+        .portal-card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 2.5rem;
+            text-align: center;
+            box-shadow: var(--shadow-md);
+            transition: var(--transition-all);
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .portal-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--color-primary);
+            box-shadow: var(--shadow-lg), var(--shadow-glow);
+        }
+
+        .portal-icon {
+            width: 64px;
+            height: 64px;
+            color: var(--color-primary);
+            margin-bottom: 1.5rem;
+        }
+
+        .portal-title {
+            font-family: var(--font-display);
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 0.75rem;
+        }
+
+        .portal-desc {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+
+        /* Upload Panels */
+        .upload-section {
+            background-color: var(--bg-card);
+            border: 2px dashed var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 3rem;
+            text-align: center;
+            box-shadow: var(--shadow-md);
+            transition: var(--transition-all);
+            cursor: pointer;
+            margin-top: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 350px;
+        }
+
+        .upload-section:hover, .upload-section.dragover {
+            border-color: var(--color-primary);
+            background-color: rgba(var(--color-primary-rgb), 0.03);
+            box-shadow: var(--shadow-lg), var(--shadow-glow);
+        }
+
+        .upload-icon {
+            width: 64px;
+            height: 64px;
+            margin-bottom: 1rem;
+            color: var(--text-muted);
+            transition: var(--transition-all);
+        }
+
+        .upload-section:hover .upload-icon, .upload-section.dragover .upload-icon {
+            color: var(--color-primary);
+            transform: scale(1.1);
+        }
+
+        /* Double Upload Layout */
+        .compare-setup {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2rem;
+            margin-top: 1.5rem;
+        }
+
+        .compare-slots {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            width: 100%;
+        }
+
+        .upload-slot {
+            background-color: var(--bg-card);
+            border: 2px dashed var(--border-color);
+            border-radius: var(--radius-md);
+            padding: 2.5rem 1.5rem;
+            text-align: center;
+            cursor: pointer;
+            transition: var(--transition-all);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 250px;
+        }
+
+        .upload-slot:hover, .upload-slot.dragover {
+            border-color: var(--color-primary);
+            background-color: rgba(var(--color-primary-rgb), 0.02);
+        }
+
+        .upload-slot.loaded {
+            border-style: solid;
+            border-color: var(--color-success);
+            background-color: var(--color-success-bg);
+        }
+
+        .slot-title {
+            font-size: 0.9rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+        }
+
+        .slot-filename {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-top: 0.75rem;
+            word-break: break-all;
+        }
+
+        /* Dashboard Summary Grid */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2.5rem;
+        }
+
+        .card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: 1.5rem;
+            position: relative;
+            overflow: hidden;
+            box-shadow: var(--shadow-md);
+            transition: var(--transition-all);
+        }
+
+        .card:hover {
+            transform: translateY(-3px);
+            box-shadow: var(--shadow-lg), var(--shadow-glow);
+            border-color: rgba(99, 102, 241, 0.3);
+        }
+
+        .card-accent { border-left: 4px solid var(--color-primary); }
+        .card-accent-added { border-left: 4px solid var(--color-added); }
+        .card-accent-deleted { border-left: 4px solid var(--color-deleted); }
+        .card-accent-modified { border-left: 4px solid var(--color-modified); }
+        .card-accent-purple { border-left: 4px solid #a855f7; }
+        .card-accent-green { border-left: 4px solid #10b981; }
+        .card-accent-amber { border-left: 4px solid #f59e0b; }
+
+        .card-title {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .card-value {
+            font-family: var(--font-display);
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin: 0.5rem 0;
+            line-height: 1;
+        }
+
+        .card-value-added { color: var(--color-added); }
+        .card-value-deleted { color: var(--color-deleted); }
+        .card-value-modified { color: var(--color-modified); }
+
+        .card-meta {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        /* Charts Panels / Breakdown Lists */
+        .charts-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2.5rem;
+        }
+
+        .section-card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: 1.75rem;
+            box-shadow: var(--shadow-md);
+        }
+
+        .section-card-title {
+            font-family: var(--font-display);
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 1.25rem;
+        }
+
+        .breakdown-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .breakdown-item {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .breakdown-meta {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        .bar-container {
+            height: 8px;
+            background-color: var(--bg-hover);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .bar-fill {
+            background-color: var(--color-primary);
+            height: 100%;
+            border-radius: 4px;
+        }
+
+        /* Segmented Category Breakdown bar for comparisons */
+        .category-bar-container {
+            height: 10px;
+            background-color: var(--bg-hover);
+            border-radius: 5px;
+            overflow: hidden;
+            display: flex;
+        }
+
+        .category-bar-added { background-color: var(--color-added); height: 100%; }
+        .category-bar-deleted { background-color: var(--color-deleted); height: 100%; }
+        .category-bar-modified { background-color: var(--color-modified); height: 100%; }
+
+        /* Tabs and Tables Controls */
+        .tabs-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .tab-buttons {
+            display: flex;
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            padding: 0.25rem;
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .tab-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            padding: 0.5rem 1.25rem;
+            border-radius: var(--radius-sm);
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: var(--transition-all);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .tab-btn.active {
+            background-color: var(--color-primary);
+            color: white;
+        }
+
+        .tab-badge {
+            font-size: 0.75rem;
+            padding: 0.1rem 0.5rem;
+            border-radius: 20px;
+            background-color: rgba(255, 255, 255, 0.2);
+            font-weight: 700;
+        }
+
+        .tab-btn.active .tab-badge {
+            background-color: rgba(255, 255, 255, 0.25);
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.2rem 0.5rem;
+            border-radius: var(--radius-sm);
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: capitalize;
+        }
+
+        .badge-added { background-color: var(--color-added-bg); color: var(--color-added); }
+        .badge-deleted { background-color: var(--color-deleted-bg); color: var(--color-deleted); }
+        .badge-modified { background-color: var(--color-modified-bg); color: var(--color-modified); }
+
+        .table-header-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .table-title {
+            font-family: var(--font-display);
+            font-size: 1.25rem;
+            font-weight: 700;
+        }
+
+        .search-container {
+            display: flex;
+            gap: 0.75rem;
+            align-items: center;
+            width: 100%;
+            max-width: 350px;
+        }
+
+        .search-input {
+            width: 100%;
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: 0.6rem 1rem;
+            color: var(--text-primary);
+            font-family: var(--font-sans);
+            font-size: 0.9rem;
+            transition: var(--transition-all);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--color-primary);
+            box-shadow: var(--shadow-sm), var(--shadow-glow);
+        }
+
+        /* Detail Tables styling */
+        .table-container {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            overflow: auto; /* Enable both vertical and horizontal scrolling */
+            max-height: 70vh; /* Keep the horizontal scrollbar always visible at the bottom of the card */
+            box-shadow: var(--shadow-md);
+            margin-bottom: 2.5rem;
+            position: relative;
+        }
+
+        .table-container > table {
+            min-width: 1200px;
+        }
+
+        .table-container > table th,
+        .table-container > table td {
+            white-space: nowrap;
+        }
+
+        .table-container > table th {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            background-color: var(--bg-hover); /* Prevent rows from showing behind the headers */
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 0.9rem;
+        }
+
+        th {
+            background-color: var(--bg-hover);
+            color: var(--text-secondary);
+            font-weight: 600;
+            padding: 1rem;
+            border-bottom: 1px solid var(--border-color);
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 0.05em;
+        }
+
+        td {
+            padding: 1rem;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-primary);
+            font-weight: 500;
+            vertical-align: middle;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        .row-clickable {
+            cursor: pointer;
+            transition: var(--transition-all);
+        }
+
+        .row-clickable:hover td {
+            background-color: rgba(99, 102, 241, 0.04);
+        }
+
+        .code-font {
+            font-family: Consolas, Monaco, monospace;
+            font-size: 0.85rem;
+        }
+
+        /* Inner Modified Table */
+        .changes-subtable {
+            width: 100%;
+            margin-top: 0.5rem;
+            border-radius: var(--radius-sm);
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+            background-color: var(--bg-hover);
+        }
+
+        .changes-subtable th {
+            padding: 0.5rem 0.75rem;
+            background-color: rgba(0, 0, 0, 0.15);
+            font-size: 0.75rem;
+            text-transform: capitalize;
+            letter-spacing: 0;
+        }
+
+        .changes-subtable td {
+            padding: 0.5rem 0.75rem;
+            font-size: 0.85rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .changes-subtable tr:last-child td {
+            border-bottom: none;
+        }
+
+        .diff-old {
+            color: var(--color-deleted);
+            text-decoration: line-through;
+            background-color: rgba(239, 68, 68, 0.08);
+            padding: 0.1rem 0.25rem;
+            border-radius: 3px;
+        }
+
+        .diff-new {
+            color: var(--color-added);
+            background-color: rgba(16, 185, 129, 0.08);
+            padding: 0.1rem 0.25rem;
+            border-radius: 3px;
+        }
+
+        /* Detail expanded card styling */
+        .expanded-row-content {
+            background-color: rgba(0, 0, 0, 0.15);
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        html[data-theme="light"] .expanded-row-content {
+            background-color: rgba(0, 0, 0, 0.02);
+        }
+
+        .details-grid {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 1.5rem;
+        }
+
+        @media (max-width: 768px) {
+            .details-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .details-sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .details-block {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: 1rem;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .details-block-title {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.5rem;
+        }
+
+        .details-param-container {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            box-shadow: var(--shadow-sm);
+            max-height: 450px;
+        }
+
+        .param-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .param-search {
+            width: 100%;
+            max-width: 250px;
+            background-color: var(--bg-hover);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            padding: 0.4rem 0.8rem;
+            color: var(--text-primary);
+            font-size: 0.8rem;
+            outline: none;
+        }
+
+        .param-table-wrapper {
+            overflow: auto; /* Allow auto overflow for scrolling */
+            flex-grow: 1;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            max-height: 380px;
+        }
+
+        .param-table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed; /* Respect fixed layout widths */
+        }
+
+        .param-table th:first-child,
+        .param-table td:first-child {
+            width: 40%;
+        }
+
+        .param-table th:last-child,
+        .param-table td:last-child {
+            width: 60%;
+        }
+
+        .param-table th {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            background-color: var(--bg-hover); /* Match container hover background */
+            color: var(--text-secondary);
+            font-weight: 600;
+            padding: 0.5rem 0.75rem;
+            border-bottom: 1px solid var(--border-color);
+            text-transform: uppercase;
+            font-size: 0.7rem;
+            letter-spacing: 0.05em;
+            text-align: left;
+        }
+
+        .param-table td {
+            padding: 0.5rem 0.75rem;
+            font-size: 0.85rem;
+            border-bottom: 1px solid var(--border-color);
+            word-wrap: break-word;
+            word-break: break-word; /* Ensure values wrap */
+            white-space: normal; /* Ensure text wraps */
+            color: var(--text-primary);
+            vertical-align: top;
+        }
+
+        .param-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .empty-state {
+            padding: 3rem;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 1.1rem;
+            font-weight: 500;
+        }
+
+        .empty-state svg {
+            width: 48px;
+            height: 48px;
+            margin-bottom: 1rem;
+            stroke: var(--text-muted);
+            fill: none;
+            stroke-width: 1.5;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header>
+            <div class="header-title">
+                <h1 id="title-project-name">Revit Snapshot Portal</h1>
+                <p id="snapshot-meta">Select a tool to visualize models or compare snapshots client-side.</p>
+            </div>
+            <div class="header-actions">
+                <button class="btn" id="load-another-btn" style="display: none;" onclick="resetViewer()">
+                    ← Back to Home
+                </button>
+                <button class="theme-toggle-btn" id="theme-toggle" title="Toggle Light/Dark Theme">
+                    <svg id="theme-icon-sun" viewBox="0 0 24 24" style="display: none;">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                    <svg id="theme-icon-moon" viewBox="0 0 24 24">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                </button>
+            </div>
+        </header>
+
+        <!-- Home Selection Portal -->
+        <div class="portal-home" id="portal-selection">
+            <div class="portal-card" onclick="switchMode('single')">
+                <svg class="portal-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                </svg>
+                <div class="portal-title">Visualize Snapshot</div>
+                <div class="portal-desc">Upload a single snapshot JSON file to explore collected elements, levels, category distributions, and parameters.</div>
+            </div>
+            <div class="portal-card" onclick="switchMode('compare')">
+                <svg class="portal-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                </svg>
+                <div class="portal-title">Compare Snapshots</div>
+                <div class="portal-desc">Select two snapshot JSON files to compare them client-side, showing added, deleted, and modified parameters.</div>
+            </div>
+        </div>
+
+        <!-- 1. Single Upload Dropzone -->
+        <div class="upload-section hidden" id="dropzone-single" onclick="triggerFileInput('single')">
+            <svg class="upload-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+            </svg>
+            <div class="upload-title">Select Snapshot JSON</div>
+            <div class="upload-subtitle">Drag and drop your snapshot JSON file here, or click to browse.</div>
+            <button class="btn btn-primary">Select JSON File</button>
+            <input type="file" id="file-input-single" style="display: none;" accept=".json" onchange="handleSingleFileSelect(event)">
+        </div>
+
+        <!-- 2. Double Upload Setup for Comparison -->
+        <div class="compare-setup hidden" id="setup-compare">
+            <div class="compare-slots">
+                <div class="upload-slot" id="slot-old" onclick="triggerFileInput('old')">
+                    <div class="slot-title">1. Baseline State (Older)</div>
+                    <svg class="upload-icon" id="icon-old" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <div class="slot-filename" id="filename-old">No baseline file loaded</div>
+                    <input type="file" id="file-input-old" style="display: none;" accept=".json" onchange="handleCompareFileSelect(event, 'old')">
+                </div>
+                <div class="upload-slot" id="slot-new" onclick="triggerFileInput('new')">
+                    <div class="slot-title">2. Target State (Newer)</div>
+                    <svg class="upload-icon" id="icon-new" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <div class="slot-filename" id="filename-new">No target file loaded</div>
+                    <input type="file" id="file-input-new" style="display: none;" accept=".json" onchange="handleCompareFileSelect(event, 'new')">
+                </div>
+            </div>
+            <button class="btn btn-primary" id="compare-btn" style="font-size: 1rem; padding: 0.8rem 2rem;" disabled onclick="executeComparison()">
+                Compare Snapshots
+            </button>
+        </div>
+
+        <!-- 3. Standalone Dashboard (Single Snapshot) -->
+        <div id="viewer-dashboard" class="hidden">
+            <div class="dashboard-grid">
+                <div class="card card-accent">
+                    <div class="card-title">Total Elements</div>
+                    <div class="card-value" id="card-total-elements">0</div>
+                    <div class="card-meta">Collected model elements</div>
+                </div>
+                <div class="card card-accent-purple">
+                    <div class="card-title">Categories</div>
+                    <div class="card-value" id="card-total-categories">0</div>
+                    <div class="card-meta">Unique Revit Categories</div>
+                </div>
+                <div class="card card-accent-green">
+                    <div class="card-title">Levels</div>
+                    <div class="card-value" id="card-total-levels">0</div>
+                    <div class="card-meta">Unique model levels</div>
+                </div>
+                <div class="card card-accent-amber">
+                    <div class="card-title">Worksets</div>
+                    <div class="card-value" id="card-total-worksets">0</div>
+                    <div class="card-meta">Worksharing categories</div>
+                </div>
+            </div>
+
+            <div class="charts-container">
+                <div class="section-card">
+                    <div class="section-card-title">Elements by Category</div>
+                    <div class="breakdown-list" id="category-list"></div>
+                </div>
+                <div class="section-card">
+                    <div class="section-card-title">Elements by Level</div>
+                    <div class="breakdown-list" id="level-list"></div>
+                </div>
+            </div>
+
+            <div class="table-header-controls">
+                <div class="table-title">Model Elements Explorer</div>
+                <div class="search-container">
+                    <input type="text" class="search-input" id="search-input-single" placeholder="Search elements..." oninput="handleSingleSearch()">
+                </div>
+            </div>
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width: 50px;"></th>
+                            <th>Unique ID</th>
+                            <th>Element ID</th>
+                            <th>Category</th>
+                            <th>Family</th>
+                            <th>Type</th>
+                            <th>Level</th>
+                            <th>Workset</th>
+                        </tr>
+                    </thead>
+                    <tbody id="elements-body"></tbody>
+                </table>
+                <div id="table-empty-single" class="empty-state" style="display: none;">
+                    <svg viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="8" y1="12" x2="16" y2="12"></line>
+                    </svg>
+                    <div>No elements found matching your criteria.</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. Comparison Dashboard (Comparison View) -->
+        <div id="compare-dashboard" class="hidden">
+            <div class="dashboard-grid">
+                <div class="card card-accent-added">
+                    <div class="card-title">Added Elements</div>
+                    <div class="card-value card-value-added" id="count-added">0</div>
+                    <div class="card-meta">New elements created</div>
+                </div>
+                <div class="card card-accent-deleted">
+                    <div class="card-title">Deleted Elements</div>
+                    <div class="card-value card-value-deleted" id="count-deleted">0</div>
+                    <div class="card-meta">Elements deleted from project</div>
+                </div>
+                <div class="card card-accent-modified">
+                    <div class="card-title">Modified Elements</div>
+                    <div class="card-value card-value-modified" id="count-modified">0</div>
+                    <div class="card-meta">Geometry or parameter changes</div>
+                </div>
+                <div class="card card-accent">
+                    <div class="card-title">Net Change</div>
+                    <div class="card-value" id="count-net" style="color: var(--color-primary);">0</div>
+                    <div class="card-meta" id="net-meta">Total element shift</div>
+                </div>
+            </div>
+
+            <div class="charts-container">
+                <div class="section-card">
+                    <div class="section-card-title">Changes by Element Category</div>
+                    <div class="breakdown-list" id="category-change-list"></div>
+                </div>
+            </div>
+
+            <div class="tabs-header">
+                <div class="tab-buttons">
+                    <button class="tab-btn active" id="tab-added-btn" onclick="switchTab('added')">
+                        Added <span class="tab-badge" id="badge-added">0</span>
+                    </button>
+                    <button class="tab-btn" id="tab-modified-btn" onclick="switchTab('modified')">
+                        Modified <span class="tab-badge" id="badge-modified">0</span>
+                    </button>
+                    <button class="tab-btn" id="tab-deleted-btn" onclick="switchTab('deleted')">
+                        Deleted <span class="tab-badge" id="badge-deleted">0</span>
+                    </button>
+                </div>
+                <div class="search-container">
+                    <input type="text" class="search-input" id="search-input-compare" placeholder="Search changed elements..." oninput="handleCompareSearch()">
+                </div>
+            </div>
+
+            <div class="table-container">
+                <table id="compare-table">
+                    <thead>
+                        <tr id="compare-table-header"></tr>
+                    </thead>
+                    <tbody id="compare-table-body"></tbody>
+                </table>
+                <div id="table-empty-compare" class="empty-state" style="display: none;">
+                    <svg viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="8" y1="12" x2="16" y2="12"></line>
+                    </svg>
+                    <div>No elements found matching your criteria.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentMode = null; // 'single' or 'compare'
+        let singleSnapshotData = null;
+        let oldSnapshotData = null;
+        let newSnapshotData = null;
+        let comparisonResult = null;
+        
+        let singleSearchQuery = '';
+        let compareSearchQuery = '';
+        let currentCompareTab = 'added';
+        let openRowId = null;
+
+        // Mode Switching
+        function switchMode(mode) {
+            currentMode = mode;
+            document.getElementById('portal-selection').classList.add('hidden');
+            document.getElementById('load-another-btn').style.display = 'flex';
+
+            if (mode === 'single') {
+                document.getElementById('dropzone-single').classList.remove('hidden');
+                document.getElementById('title-project-name').textContent = 'Visualize Snapshot';
+                document.getElementById('snapshot-meta').textContent = 'Select one snapshot JSON file to explore elements and properties.';
+            } else {
+                document.getElementById('setup-compare').classList.remove('hidden');
+                document.getElementById('title-project-name').textContent = 'Compare Snapshots';
+                document.getElementById('snapshot-meta').textContent = 'Select Baseline (older) and Target (newer) snapshot JSON files to compare them.';
+            }
+        }
+
+        function resetViewer() {
+            currentMode = null;
+            singleSnapshotData = null;
+            oldSnapshotData = null;
+            newSnapshotData = null;
+            comparisonResult = null;
+            openRowId = null;
+
+            // Reset UI
+            document.getElementById('portal-selection').classList.remove('hidden');
+            document.getElementById('dropzone-single').classList.add('hidden');
+            document.getElementById('setup-compare').classList.add('hidden');
+            document.getElementById('viewer-dashboard').classList.add('hidden');
+            document.getElementById('compare-dashboard').classList.add('hidden');
+            document.getElementById('load-another-btn').style.display = 'none';
+
+            document.getElementById('title-project-name').textContent = 'Revit Snapshot Portal';
+            document.getElementById('snapshot-meta').textContent = 'Select a tool to visualize models or compare snapshots client-side.';
+
+            // Reset Inputs
+            document.getElementById('file-input-single').value = '';
+            document.getElementById('file-input-old').value = '';
+            document.getElementById('file-input-new').value = '';
+
+            // Reset Slot UI
+            resetSlotUI('old');
+            resetSlotUI('new');
+            document.getElementById('compare-btn').disabled = true;
+        }
+
+        // File Selection Triggers
+        function triggerFileInput(slot) {
+            if (slot === 'single') document.getElementById('file-input-single').click();
+            else if (slot === 'old') document.getElementById('file-input-old').click();
+            else if (slot === 'new') document.getElementById('file-input-new').click();
+        }
+
+        // Single File Handling
+        function handleSingleFileSelect(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const parsed = JSON.parse(e.target.result);
+                        if (!parsed.elements || !Array.isArray(parsed.elements)) {
+                            alert('Invalid JSON snapshot: missing "elements" array.');
+                            return;
+                        }
+                        singleSnapshotData = parsed;
+                        renderSingleSnapshot();
+                    } catch (err) {
+                        alert('Error parsing JSON file: ' + err.message);
+                    }
+                };
+                reader.readAsText(file);
+            }
+        }
+
+        // Dual File Handling for Comparison
+        function handleCompareFileSelect(event, slot) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const parsed = JSON.parse(e.target.result);
+                        if (!parsed.elements || !Array.isArray(parsed.elements)) {
+                            alert('Invalid JSON snapshot: missing "elements" array.');
+                            return;
+                        }
+                        
+                        if (slot === 'old') oldSnapshotData = parsed;
+                        else newSnapshotData = parsed;
+                        
+                        updateSlotUI(slot, file.name);
+                        
+                        // Enable compare button if both files are loaded
+                        if (oldSnapshotData && newSnapshotData) {
+                            document.getElementById('compare-btn').disabled = false;
+                        }
+                    } catch (err) {
+                        alert('Error parsing JSON file: ' + err.message);
+                    }
+                };
+                reader.readAsText(file);
+            }
+        }
+
+        function updateSlotUI(slot, filename) {
+            const container = document.getElementById('slot-' + slot);
+            const icon = document.getElementById('icon-' + slot);
+            const text = document.getElementById('filename-' + slot);
+
+            container.classList.add('loaded');
+            text.textContent = filename;
+            
+            // Checkmark Icon
+            icon.innerHTML = `
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            `;
+            icon.style.color = 'var(--color-success)';
+        }
+
+        function resetSlotUI(slot) {
+            const container = document.getElementById('slot-' + slot);
+            const icon = document.getElementById('icon-' + slot);
+            const text = document.getElementById('filename-' + slot);
+
+            container.classList.remove('loaded');
+            text.textContent = slot === 'old' ? 'No baseline file loaded' : 'No target file loaded';
+            
+            // Plus Circle Icon
+            icon.innerHTML = `
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            `;
+            icon.style.color = '';
+        }
+
+        // --- Render Single Snapshot Dashboard ---
+        function renderSingleSnapshot() {
+            document.getElementById('dropzone-single').classList.add('hidden');
+            document.getElementById('viewer-dashboard').classList.remove('hidden');
+
+            const proj = singleSnapshotData.project_name || 'Unnamed Project';
+            const stamp = singleSnapshotData.timestamp || 'Unknown';
+            const revit = singleSnapshotData.revit_version || 'N/A';
+            const doc = singleSnapshotData.document_path || '';
+            document.getElementById('title-project-name').textContent = proj + ' Snapshot';
+            document.getElementById('snapshot-meta').textContent = `Created: ${stamp} | Version: ${revit} ${doc ? ' | Path: ' + doc : ''}`;
+
+            const total = singleSnapshotData.elements.length;
+            document.getElementById('card-total-elements').textContent = total;
+
+            const categories = {};
+            const levels = {};
+            const worksets = {};
+
+            singleSnapshotData.elements.forEach(el => {
+                categories[el.category] = (categories[el.category] || 0) + 1;
+                const lvl = el.level || 'None';
+                levels[lvl] = (levels[lvl] || 0) + 1;
+                const ws = el.workset || 'Workset1';
+                worksets[ws] = (worksets[ws] || 0) + 1;
+            });
+
+            document.getElementById('card-total-categories').textContent = Object.keys(categories).length;
+            document.getElementById('card-total-levels').textContent = Object.keys(levels).length;
+            document.getElementById('card-total-worksets').textContent = Object.keys(worksets).length;
+
+            renderBreakdownList('category-list', categories, total);
+            renderBreakdownList('level-list', levels, total);
+
+            singleSearchQuery = '';
+            document.getElementById('search-input-single').value = '';
+            renderSingleTable();
+        }
+
+        function renderBreakdownList(containerId, dataset, total) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = '';
+            const sorted = Object.entries(dataset).sort((a, b) => b[1] - a[1]);
+            
+            if (sorted.length === 0) {
+                container.innerHTML = '<div class="empty-state">No elements in snapshot.</div>';
+                return;
+            }
+
+            const max = sorted[0][1];
+            sorted.forEach(([name, count]) => {
+                const percent = (count / total) * 100;
+                const width = (count / max) * 100;
+                container.innerHTML += `
+                    <div class="breakdown-item">
+                        <div class="breakdown-meta">
+                            <span>${name}</span>
+                            <span style="font-weight: 700;">${count} (${percent.toFixed(1)}%)</span>
+                        </div>
+                        <div class="bar-container">
+                            <div class="bar-fill" style="width: ${width}%"></div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function handleSingleSearch() {
+            singleSearchQuery = document.getElementById('search-input-single').value.toLowerCase().trim();
+            if (openRowId) {
+                const details = document.getElementById('details-row-' + openRowId);
+                if (details) details.remove();
+                openRowId = null;
+            }
+            renderSingleTable();
+        }
+
+        function renderSingleTable() {
+            const body = document.getElementById('elements-body');
+            const empty = document.getElementById('table-empty-single');
+            body.innerHTML = '';
+
+            let dataset = singleSnapshotData.elements;
+            if (singleSearchQuery) {
+                dataset = dataset.filter(el => {
+                    return String(el.element_id).includes(singleSearchQuery) ||
+                           el.unique_id.toLowerCase().includes(singleSearchQuery) ||
+                           el.category.toLowerCase().includes(singleSearchQuery) ||
+                           el.family.toLowerCase().includes(singleSearchQuery) ||
+                           el.type.toLowerCase().includes(singleSearchQuery) ||
+                           (el.level || '').toLowerCase().includes(singleSearchQuery);
+                });
+            }
+
+            if (dataset.length === 0) {
+                empty.style.display = 'block';
+                return;
+            }
+            empty.style.display = 'none';
+
+            dataset.forEach(el => {
+                const tr = document.createElement('tr');
+                tr.id = 'row-' + el.unique_id;
+                tr.className = 'row-clickable';
+                tr.onclick = () => switchSingleRow(el.unique_id);
+                tr.innerHTML = `
+                    <td class="code-font" id="expand-${el.unique_id}" style="color: var(--color-primary); font-weight: 700; text-align: center;">▶</td>
+                    <td class="code-font">${el.unique_id}</td>
+                    <td class="code-font" style="font-weight: 700;">${el.element_id}</td>
+                    <td>${el.category}</td>
+                    <td>${el.family}</td>
+                    <td>${el.type}</td>
+                    <td>${el.level || 'None'}</td>
+                    <td>${el.workset || 'Workset1'}</td>
+                `;
+                body.appendChild(tr);
+            });
+        }
+
+        function switchSingleRow(uniqueId) {
+            const targetRow = document.getElementById('row-' + uniqueId);
+            const expandSymbol = document.getElementById('expand-' + uniqueId);
+            
+            const existingDetailsRow = document.getElementById('details-row-' + uniqueId);
+            if (existingDetailsRow) {
+                existingDetailsRow.remove();
+                expandSymbol.textContent = '▶';
+                openRowId = null;
+                return;
+            }
+            
+            if (openRowId) {
+                const openDetails = document.getElementById('details-row-' + openRowId);
+                if (openDetails) openDetails.remove();
+                const openExpand = document.getElementById('expand-' + openRowId);
+                if (openExpand) openExpand.textContent = '▶';
+            }
+            
+            const el = singleSnapshotData.elements.find(x => x.unique_id === uniqueId);
+            if (!el) return;
+            
+            openRowId = uniqueId;
+            expandSymbol.textContent = '▼';
+            
+            let paramRows = '';
+            const sortedParams = Object.entries(el.parameters || {}).sort((a, b) => a[0].localeCompare(b[0]));
+            sortedParams.forEach(([name, val]) => {
+                paramRows += `<tr><td style="font-weight:600;">${name}</td><td>${val}</td></tr>`;
+            });
+            if (sortedParams.length === 0) {
+                paramRows = '<tr><td colspan="2" style="text-align: center; color: var(--text-muted);">No parameters available.</td></tr>';
+            }
+
+            let bboxText = 'No Geometry';
+            if (el.bbox) {
+                bboxText = `Min: [${el.bbox.min.join(', ')}]<br>Max: [${el.bbox.max.join(', ')}]`;
+            }
+
+            const detailsRow = document.createElement('tr');
+            detailsRow.id = 'details-row-' + uniqueId;
+            detailsRow.innerHTML = `
+                <td colspan="8" style="padding: 0;">
+                    <div class="expanded-row-content">
+                        <div class="details-grid">
+                            <div class="details-sidebar">
+                                <div class="details-block">
+                                    <div class="details-block-title">Geometry Bounding Box (ft)</div>
+                                    <div class="code-font" style="font-size: 0.85rem;">${bboxText}</div>
+                                </div>
+                                <div class="details-block">
+                                    <div class="details-block-title">Construction Phases</div>
+                                    <div style="font-size: 0.85rem;">
+                                        <strong>Phase Created:</strong> ${el.phase_created || 'None'}<br>
+                                        <strong>Phase Demolished:</strong> ${el.phase_demolished || 'None'}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="details-param-container">
+                                <div class="param-header">
+                                    <span style="font-weight: 700; font-size: 0.95rem;">Element Parameters (${sortedParams.length})</span>
+                                    <input type="text" class="param-search" id="param-search-${uniqueId}" placeholder="Search parameters..." oninput="filterParams('${uniqueId}')">
+                                </div>
+                                <div class="param-table-wrapper">
+                                    <table class="param-table">
+                                        <thead><tr><th>Parameter Name</th><th>Value</th></tr></thead>
+                                        <tbody id="param-body-${uniqueId}">${paramRows}</tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </td>
+            `;
+            targetRow.parentNode.insertBefore(detailsRow, targetRow.nextSibling);
+        }
+
+        function filterParams(uniqueId) {
+            const filter = document.getElementById('param-search-' + uniqueId).value.toLowerCase();
+            const body = document.getElementById('param-body-' + uniqueId);
+            const trs = body.getElementsByTagName('tr');
+            
+            for (let i = 0; i < trs.length; i++) {
+                const tdName = trs[i].getElementsByTagName('td')[0];
+                const tdVal = trs[i].getElementsByTagName('td')[1];
+                if (tdName && tdVal) {
+                    const text = (tdName.textContent + ' ' + tdVal.textContent).toLowerCase();
+                    trs[i].style.display = text.includes(filter) ? '' : 'none';
+                }
+            }
+        }
+
+        // --- Compare Snapshots Engine ---
+        function executeComparison() {
+            document.getElementById('setup-compare').classList.add('hidden');
+            document.getElementById('compare-dashboard').classList.remove('hidden');
+
+            const oldElements = {};
+            oldSnapshotData.elements.forEach(el => { oldElements[el.unique_id] = el; });
+
+            const newElements = {};
+            newSnapshotData.elements.forEach(el => { newElements[el.unique_id] = el; });
+
+            const added = [];
+            const deleted = [];
+            const modified = [];
+
+            // 1. Detect additions
+            for (const uid in newElements) {
+                if (!oldElements[uid]) {
+                    added.push(newElements[uid]);
+                }
+            }
+
+            // 2. Detect deletions
+            for (const uid in oldElements) {
+                if (!newElements[uid]) {
+                    deleted.push(oldElements[uid]);
+                }
+            }
+
+            // 3. Detect modifications
+            for (const uid in newElements) {
+                if (oldElements[uid]) {
+                    const oldEl = oldElements[uid];
+                    const newEl = newElements[uid];
+                    const changes = [];
+
+                    // Identity fields
+                    const fields = ["category", "family", "type", "level", "workset", "phase_created", "phase_demolished"];
+                    fields.forEach(f => {
+                        if (oldEl[f] !== newEl[f]) {
+                            changes.push({
+                                property: f.charAt(0).toUpperCase() + f.slice(1),
+                                old: oldEl[f] !== undefined ? oldEl[f] : null,
+                                new: newEl[f] !== undefined ? newEl[f] : null
+                            });
+                        }
+                    });
+
+                    // Bounding Box
+                    let bboxChanged = false;
+                    if (!oldEl.bbox && newEl.bbox) bboxChanged = true;
+                    else if (oldEl.bbox && !newEl.bbox) bboxChanged = true;
+                    else if (oldEl.bbox && newEl.bbox) {
+                        const tol = 0.001;
+                        for (const key of ["min", "max"]) {
+                            for (let i = 0; i < 3; i++) {
+                                if (Math.abs(oldEl.bbox[key][i] - newEl.bbox[key][i]) > tol) {
+                                    bboxChanged = true; break;
+                                }
+                            }
+                            if (bboxChanged) break;
+                        }
+                    }
+                    if (bboxChanged) {
+                        changes.push({
+                            property: "Bounding Box / Geometry",
+                            old: "Geometry Shifted",
+                            new: "Geometry Shifted"
+                        });
+                    }
+
+                    // Parameters
+                    const oldP = oldEl.parameters || {};
+                    const newP = newEl.parameters || {};
+                    for (const name in oldP) {
+                        if (newP[name] === undefined) {
+                            changes.push({ property: "Param: " + name, old: oldP[name], new: null });
+                        } else if (oldP[name] !== newP[name]) {
+                            changes.push({ property: "Param: " + name, old: oldP[name], new: newP[name] });
+                        }
+                    }
+                    for (const name in newP) {
+                        if (oldP[name] === undefined) {
+                            changes.push({ property: "Param: " + name, old: null, new: newP[name] });
+                        }
+                    }
+
+                    if (changes.length > 0) {
+                        modified.push({
+                            unique_id: uid,
+                            element_id: newEl.element_id,
+                            category: newEl.category,
+                            family: newEl.family,
+                            type: newEl.type,
+                            level: newEl.level || 'None',
+                            workset: newEl.workset || 'Workset1',
+                            creator: newEl.creator || '',
+                            last_changed_by: newEl.last_changed_by || '',
+                            parameters: newEl.parameters || {},
+                            changes: changes
+                        });
+                    }
+                }
+            }
+
+            comparisonResult = {
+                projectName: newSnapshotData.project_name || oldSnapshotData.project_name || "Revit Project",
+                oldTimestamp: oldSnapshotData.timestamp || "Before",
+                newTimestamp: newSnapshotData.timestamp || "After",
+                added: added,
+                deleted: deleted,
+                modified: modified
+            };
+
+            renderComparisonDashboard();
+        }
+
+        function renderComparisonDashboard() {
+            // Populate Header Metadata
+            document.getElementById('title-project-name').textContent = comparisonResult.projectName + ' Comparison';
+            document.getElementById('snapshot-meta').textContent = `Comparison: ${comparisonResult.oldTimestamp} → ${comparisonResult.newTimestamp}`;
+
+            const countAdded = comparisonResult.added.length;
+            const countDeleted = comparisonResult.deleted.length;
+            const countModified = comparisonResult.modified.length;
+            const netChange = countAdded - countDeleted;
+
+            // Summary cards
+            document.getElementById('count-added').textContent = countAdded;
+            document.getElementById('count-deleted').textContent = countDeleted;
+            document.getElementById('count-modified').textContent = countModified;
+            
+            const netEl = document.getElementById('count-net');
+            netEl.textContent = (netChange >= 0 ? '+' : '') + netChange;
+            document.getElementById('net-meta').textContent = netChange >= 0 ? 'Increase in elements' : 'Decrease in elements';
+
+            // Tab badges
+            document.getElementById('badge-added').textContent = countAdded;
+            document.getElementById('badge-deleted').textContent = countDeleted;
+            document.getElementById('badge-modified').textContent = countModified;
+
+            // Render category breakdown
+            renderCategoryChangesList();
+
+            // Set Initial Tab
+            switchTab('added');
+        }
+
+        function renderCategoryChangesList() {
+            const categories = {};
+            
+            comparisonResult.added.forEach(el => {
+                if (!categories[el.category]) categories[el.category] = { added: 0, deleted: 0, modified: 0, total: 0 };
+                categories[el.category].added++; categories[el.category].total++;
+            });
+            comparisonResult.deleted.forEach(el => {
+                if (!categories[el.category]) categories[el.category] = { added: 0, deleted: 0, modified: 0, total: 0 };
+                categories[el.category].deleted++; categories[el.category].total++;
+            });
+            comparisonResult.modified.forEach(el => {
+                if (!categories[el.category]) categories[el.category] = { added: 0, deleted: 0, modified: 0, total: 0 };
+                categories[el.category].modified++; categories[el.category].total++;
+            });
+
+            const sorted = Object.entries(categories).sort((a, b) => b[1].total - a[1].total).slice(0, 8);
+            const container = document.getElementById('category-change-list');
+            container.innerHTML = '';
+
+            if (sorted.length === 0) {
+                container.innerHTML = '<div class="empty-state">No changes recorded between snapshots.</div>';
+                return;
+            }
+
+            const max = sorted[0][1].total;
+
+            sorted.forEach(([name, stats]) => {
+                const addPct = (stats.added / stats.total) * 100;
+                const delPct = (stats.deleted / stats.total) * 100;
+                const modPct = (stats.modified / stats.total) * 100;
+                const barWidth = (stats.total / max) * 100;
+
+                container.innerHTML += `
+                    <div class="breakdown-item">
+                        <div class="breakdown-meta">
+                            <span>${name}</span>
+                            <span>
+                                ${stats.added > 0 ? `<span style="color:var(--color-added)">+${stats.added}</span> ` : ''}
+                                ${stats.modified > 0 ? `<span style="color:var(--color-modified)">~${stats.modified}</span> ` : ''}
+                                ${stats.deleted > 0 ? `<span style="color:var(--color-deleted)">-${stats.deleted}</span>` : ''}
+                                <span style="font-weight:700; margin-left:0.25rem;">(Total: ${stats.total})</span>
+                            </span>
+                        </div>
+                        <div style="width: ${barWidth}%;">
+                            <div class="category-bar-container">
+                                ${stats.added > 0 ? `<div class="category-bar-added" style="width: ${addPct}%"></div>` : ''}
+                                ${stats.modified > 0 ? `<div class="category-bar-modified" style="width: ${modPct}%"></div>` : ''}
+                                ${stats.deleted > 0 ? `<div class="category-bar-deleted" style="width: ${delPct}%"></div>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function switchTab(tab) {
+            currentCompareTab = tab;
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`tab-${tab}-btn`).classList.add('active');
+
+            document.getElementById('search-input-compare').value = '';
+            compareSearchQuery = '';
+            renderCompareTable();
+        }
+
+        function handleCompareSearch() {
+            compareSearchQuery = document.getElementById('search-input-compare').value.toLowerCase().trim();
+            renderCompareTable();
+        }
+
+        function getElementUser(el) {
+            if (!el) return '—';
+            if (el.last_changed_by) return el.last_changed_by;
+            if (el.creator) return el.creator;
+            
+            const params = el.parameters || {};
+            const userParams = ['Geändert von', 'Last Changed By', 'Creator', 'Erstellt von', 'Edited By', 'Modified By'];
+            for (const key of userParams) {
+                if (params[key] && params[key] !== 'None' && params[key] !== 'Unknown') {
+                    return params[key];
+                }
+            }
+            return '—';
+        }
+
+        function renderCompareTable() {
+            const header = document.getElementById('compare-table-header');
+            const body = document.getElementById('compare-table-body');
+            const empty = document.getElementById('table-empty-compare');
+            
+            body.innerHTML = '';
+
+            if (currentCompareTab === 'added' || currentCompareTab === 'deleted') {
+                header.innerHTML = `
+                    <th>Unique ID</th>
+                    <th>Element ID</th>
+                    <th>Category</th>
+                    <th>Family</th>
+                    <th>Type</th>
+                    <th>Level</th>
+                    <th>Workset</th>
+                    <th>User</th>
+                    <th>Status</th>
+                `;
+            } else {
+                header.innerHTML = `
+                    <th>Unique ID</th>
+                    <th>Element ID</th>
+                    <th>Category</th>
+                    <th>Family & Type</th>
+                    <th>Level</th>
+                    <th>User</th>
+                    <th>Modifications & Value Shift</th>
+                `;
+            }
+
+            let dataset = comparisonResult[currentCompareTab];
+            if (compareSearchQuery) {
+                dataset = dataset.filter(el => {
+                    return String(el.element_id).includes(compareSearchQuery) ||
+                           el.unique_id.toLowerCase().includes(compareSearchQuery) ||
+                           el.category.toLowerCase().includes(compareSearchQuery) ||
+                           el.family.toLowerCase().includes(compareSearchQuery) ||
+                           el.type.toLowerCase().includes(compareSearchQuery) ||
+                           (el.level || '').toLowerCase().includes(compareSearchQuery);
+                });
+            }
+
+            if (dataset.length === 0) {
+                empty.style.display = 'block';
+                return;
+            }
+            empty.style.display = 'none';
+
+            dataset.forEach(el => {
+                const tr = document.createElement('tr');
+                if (currentCompareTab === 'added' || currentCompareTab === 'deleted') {
+                    const badge = currentCompareTab === 'added' 
+                        ? '<span class="badge badge-added">Added</span>'
+                        : '<span class="badge badge-deleted">Deleted</span>';
+                    const user = getElementUser(el);
+                    tr.innerHTML = `
+                        <td class="code-font">${el.unique_id}</td>
+                        <td class="code-font" style="font-weight: 700;">${el.element_id}</td>
+                        <td>${el.category}</td>
+                        <td>${el.family}</td>
+                        <td>${el.type}</td>
+                        <td>${el.level || 'None'}</td>
+                        <td>${el.workset || 'Workset1'}</td>
+                        <td>${user}</td>
+                        <td>${badge}</td>
+                    `;
+                } else {
+                    let changesHtml = `<table class="changes-subtable">
+                        <thead><tr><th>Property/Param</th><th>Before</th><th>After</th></tr></thead>
+                        <tbody>`;
+                    
+                    el.changes.forEach(ch => {
+                        changesHtml += `
+                            <tr>
+                                <td style="font-weight:600;">${ch.property}</td>
+                                <td><span class="diff-old">${ch.old !== null ? ch.old : '—'}</span></td>
+                                <td><span class="diff-new">${ch.new !== null ? ch.new : '—'}</span></td>
+                            </tr>
+                        `;
+                    });
+                    changesHtml += `</tbody></table>`;
+                    const user = getElementUser(el);
+
+                    tr.innerHTML = `
+                        <td class="code-font">${el.unique_id}</td>
+                        <td class="code-font" style="font-weight: 700;">${el.element_id}</td>
+                        <td>${el.category}</td>
+                        <td>
+                            <div style="font-weight:600;">${el.family}</div>
+                            <div style="font-size:0.8rem; color:var(--text-secondary);">${el.type}</div>
+                        </td>
+                        <td>${el.level}</td>
+                        <td>${user}</td>
+                        <td>${changesHtml}</td>
+                    `;
+                }
+                body.appendChild(tr);
+            });
+        }
+    </script>
+</body>
+</html>
